@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    POM HIJO — item-service
+    ═══════════════════════
+    Hereda TODO del padre: versiones de Java, dependencyManagement,
+    pluginManagement y la configuración del compilador con MapStruct/Lombok.
+
+    Este archivo solo declara LO QUE ES ÚNICO de este módulo:
+      - Su artifactId
+      - Las dependencias que necesita (sin versiones, las gestiona el padre)
+      - El plugin spring-boot-maven-plugin para generar el JAR ejecutable
+  -->
+  <parent>
+    <groupId>com.microbook</groupId>
+    <artifactId>microbook-project</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <!--
+      relativePath apunta al pom.xml padre.
+      "../pom.xml" significa "sube un nivel desde esta carpeta".
+    -->
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>item-service</artifactId>
+  <name>item-service</name>
+  <description>Microservicio de Items — Cap. 4 Clean Architecture</description>
+
+  <dependencies>
+
+    <!-- Web (REST controllers) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Validación de DTOs con @NotBlank, @Size, etc. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!-- JPA (acceso a base de datos con repositorios) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!-- H2: base de datos en memoria para desarrollo local -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Actuator: endpoints /health, /metrics, /info -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <!-- MapStruct: generación de mappers en tiempo de compilación -->
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct</artifactId>
+      <!-- Sin <version>: la toma del dependencyManagement del padre -->
+    </dependency>
+
+    <!-- Lombok: reduce boilerplate (@Getter, @Builder, etc.) -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- DevTools: recarga automática al guardar en desarrollo -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Test: JUnit 5 + Mockito + AssertJ + MockMvc -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!--
+        spring-boot-maven-plugin: empaqueta el proyecto como un
+        "fat JAR" ejecutable que incluye todas las dependencias.
+        Esto es lo que permite hacer: java -jar item-service.jar
+      -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <!-- Excluir Lombok del JAR final (solo se usa en compilación) -->
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

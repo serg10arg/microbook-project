@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    POM PADRE (Parent POM)
+    ══════════════════════
+    Este archivo es el "director de orquesta" del monorepo.
+    NO produce un JAR ni una aplicación ejecutable.
+    Su único trabajo es:
+      1. Declarar qué módulos existen (sección <modules>)
+      2. Centralizar versiones de dependencias (sección <dependencyManagement>)
+      3. Centralizar configuración de plugins (sección <pluginManagement>)
+
+    Beneficio clave: si mañana quieres actualizar Spring Boot de 3.3.0 a 3.4.0,
+    lo cambias aquí UNA vez y se aplica a TODOS los módulos automáticamente.
+  -->
+
+  <!-- Hereda de Spring Boot BOM para gestión automática de versiones -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.microbook</groupId>
+  <artifactId>microbook-project</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <!--
+    packaging = pom  →  le dice a Maven que este módulo NO genera JAR.
+    Es obligatorio en todo POM padre de un proyecto multi-módulo.
+  -->
+  <packaging>pom</packaging>
+
+  <name>microbook-project</name>
+  <description>
+    Implementación progresiva de "The Art of Decoding Microservices"
+    con Clean Architecture, Spring Boot 3 y Java 21.
+  </description>
+
+  <!--
+    MÓDULOS
+    ═══════
+    Cada <module> apunta a una subcarpeta que contiene su propio pom.xml.
+    Maven los construye en este orden cuando ejecutas `mvn install` en la raíz.
+    El orden importa si un módulo depende de otro (aquí no aplica aún).
+  -->
+  <modules>
+    <module>service-registry</module>
+    <module>api-gateway</module>
+    <module>item-service</module>
+    <module>order-service</module>
+    <module>notification-service</module>
+  </modules>
+
+  <!-- Versiones centralizadas — cambiar aquí afecta a todos los módulos -->
+  <properties>
+    <java.version>21</java.version>
+    <mapstruct.version>1.5.5.Final</mapstruct.version>
+    <lombok.version>1.18.30</lombok.version>
+    <spring-cloud.version>2023.0.2</spring-cloud.version>
+    <testcontainers.version>1.19.8</testcontainers.version>
+  </properties>
+
+  <!--
+    DEPENDENCY MANAGEMENT
+    ═════════════════════
+    No agrega dependencias a los módulos hijos.
+    Solo DECLARA versiones para que los hijos puedan usar
+    <dependency> sin especificar <version>.
+
+    Diferencia clave con <dependencies>:
+      <dependencyManagement>  →  governa versiones (no las añade)
+      <dependencies>          →  las añade a TODOS los hijos (usar con cuidado)
+  -->
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- BOM de Spring Cloud (Eureka, Gateway, etc.) -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- MapStruct -->
+      <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct</artifactId>
+        <version>${mapstruct.version}</version>
+      </dependency>
+
+      <!-- Lombok -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- Testcontainers BOM -->
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <!--
+    PLUGIN MANAGEMENT
+    ═════════════════
+    Centraliza la configuración del compilador para todos los módulos.
+    Los módulos hijos solo necesitan declarar el plugin sin configuración.
+  -->
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <source>21</source>
+            <target>21</target>
+            <!--
+              El orden de los annotation processors es CRÍTICO:
+              Lombok primero (genera getters/setters),
+              MapStruct segundo (los usa para generar mappers).
+            -->
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+              <path>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+</project>

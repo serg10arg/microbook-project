@@ -1,0 +1,55 @@
+name: CI — Build & Test
+
+# Se ejecuta en cada push a main/develop y en Pull Requests
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (Java 21)
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Descargar el código del repositorio
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configurar Java 21 (Temurin = distribución open source de Eclipse)
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Cachear dependencias Maven entre ejecuciones
+      #    Evita descargar ~200MB de JARs en cada run → ahorra 2-3 min
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          # La clave cambia si cambia algún pom.xml → invalida el caché
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # 4. Compilar todos los módulos desde el POM padre
+      - name: Build all modules
+        run: mvn clean compile --no-transfer-progress
+
+      # 5. Ejecutar tests de todos los módulos
+      - name: Run tests
+        run: mvn test --no-transfer-progress
+
+      # 6. Publicar reporte de tests como artefacto del workflow
+      #    Visible en la pestaña "Actions" de GitHub
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()   # ejecutar incluso si los tests fallan
+        with:
+          name: test-reports
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 7

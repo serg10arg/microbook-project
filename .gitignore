@@ -1,0 +1,57 @@
+# ── Maven ────────────────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── Spring Boot ──────────────────────────────────────────────────────────────
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ── IntelliJ IDEA ────────────────────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ── Eclipse ──────────────────────────────────────────────────────────────────
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# ── VS Code ──────────────────────────────────────────────────────────────────
+.vscode/
+*.code-workspace
+
+# ── Sistema operativo ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ── Variables de entorno y secretos (NUNCA subir al repo) ────────────────────
+.env
+.env.local
+.env.*.local
+application-secret.yml
+application-local.yml
+**/src/main/resources/application-local.yml
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+.docker/

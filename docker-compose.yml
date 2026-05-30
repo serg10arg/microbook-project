@@ -1,0 +1,110 @@
+version: "3.9"
+
+# ── Red compartida entre todos los servicios ─────────────────────────────────
+networks:
+  microbook-net:
+    driver: bridge
+
+# ── Volúmenes persistentes ───────────────────────────────────────────────────
+volumes:
+  postgres-data:
+
+services:
+
+  # ── INFRAESTRUCTURA ────────────────────────────────────────────────────────
+
+  # Base de datos PostgreSQL (reemplaza H2 cuando se usa docker-compose)
+  postgres:
+    image: postgres:16-alpine
+    container_name: microbook-postgres
+    environment:
+      POSTGRES_USER: microbook
+      POSTGRES_PASSWORD: microbook
+      POSTGRES_DB: itemsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - microbook-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U microbook"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Zookeeper (requerido por Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: microbook-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - microbook-net
+
+  # Apache Kafka (mensajería asíncrona, Cap. 4)
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: microbook-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - microbook-net
+
+  # Zipkin (trazas distribuidas, Cap. 6)
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: microbook-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - microbook-net
+
+  # ── MICROSERVICIOS ─────────────────────────────────────────────────────────
+  # Nota: descomenta cada servicio a medida que lo implementes.
+  # Mientras trabajas solo en item-service, ejecuta: mvn spring-boot:run
+  # y solo levanta la infra con: docker-compose up postgres kafka zipkin
+
+  # service-registry:
+  #   build: ./service-registry
+  #   container_name: microbook-registry
+  #   ports:
+  #     - "8761:8761"
+  #   networks:
+  #     - microbook-net
+
+  # api-gateway:
+  #   build: ./api-gateway
+  #   container_name: microbook-gateway
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - service-registry
+  #   environment:
+  #     EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka
+  #   networks:
+  #     - microbook-net
+
+  # item-service:
+  #   build: ./item-service
+  #   container_name: microbook-items
+  #   ports:
+  #     - "8081:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/itemsdb
+  #     SPRING_DATASOURCE_USERNAME: microbook
+  #     SPRING_DATASOURCE_PASSWORD: microbook
+  #     EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka
+  #   networks:
+  #     - microbook-net
