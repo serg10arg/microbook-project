@@ -93,6 +93,34 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- ── WebFlux: necesario para WebClient ──────────────────────────────────
+     WebClient pertenece a Spring WebFlux aunque tu servicio sea MVC.
+     Spring Boot gestiona que ambos coexistan sin conflicto. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+
+    <!-- ── Reactor Netty: cliente HTTP subyacente de WebClient ────────────── -->
+    <dependency>
+      <groupId>io.projectreactor.netty</groupId>
+      <artifactId>reactor-netty-http</artifactId>
+    </dependency>
+
+    <!-- ── Jackson Datatype JSR310: serialización de java.time.Instant ───── -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+
+    <!-- ── WireMock: servidor HTTP mock para los tests del cliente ────────── -->
+    <dependency>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-standalone</artifactId>
+      <version>3.5.4</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

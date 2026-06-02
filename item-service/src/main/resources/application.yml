@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: item-service   # este yaml está en item-service
+
+# ── Configuración de servicios externos ──────────────────────────────────────
+#
+# Separar la URL de los servicios externos en application.yml tiene tres ventajas:
+#   1. En tests, puedes apuntar a WireMock con @DynamicPropertySource
+#   2. En producción, se sobreescribe con variables de entorno:
+#      SERVICES_ORDER-SERVICE_BASE-URL=http://order-service:8082
+#   3. Si order-service cambia su puerto, no hay que recompilar, solo cambiar el yaml
+
+services:
+  order-service:
+    base-url: http://localhost:8082
+    connect-timeout-ms: 2000    # 2s para establecer conexión TCP
+    read-timeout-s: 5           # 5s para leer la respuesta completa
