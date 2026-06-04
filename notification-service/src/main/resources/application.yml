@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: notification-service
+
+  # BD para la tabla processed_events (idempotencia)
+  datasource:
+    url: jdbc:h2:mem:notificationsdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop   # En producción: validate + Flyway
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      # Manual ACK: el offset se confirma solo cuando el listener termina OK
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: "com.microbook.orderservice.domain.event"
+    producer:
+      # Necesario para que DeadLetterPublishingRecoverer pueda escribir en el DLT
+      key-serializer:   org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 8083
+
+logging:
+  level:
+    com.microbook: DEBUG
+    org.springframework.kafka: INFO
