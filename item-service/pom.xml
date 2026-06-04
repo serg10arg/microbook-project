@@ -121,6 +121,22 @@
       <scope>test</scope>
     </dependency>
 
+    <!--
+    springdoc-openapi-starter-webmvc-ui incluye:
+      - Generación automática del JSON OpenAPI 3   → GET /v3/api-docs
+      - Swagger UI interactivo                     → GET /swagger-ui.html
+      - Integración con Spring MVC y Bean Validation
+      - Soporte nativo para ProblemDetail (Spring 6)
+
+    Compatible con Spring Boot 3.x y Java 21.
+    Para Spring Boot 2.x usar springdoc-openapi-ui (versión 1.x).
+    -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.5.0</version>
+    </dependency>
+
   </dependencies>
 
   <build>
