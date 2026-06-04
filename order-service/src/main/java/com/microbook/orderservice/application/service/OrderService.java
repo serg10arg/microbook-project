@@ -4,6 +4,7 @@ import com.microbook.orderservice.domain.exception.OrderNotFoundException;
 import com.microbook.orderservice.domain.model.Order;
 import com.microbook.orderservice.domain.port.in.OrderUseCase;
 import com.microbook.orderservice.domain.port.out.OrderRepository;
+import com.microbook.orderservice.infrastructure.messaging.producer.OrderProducerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,16 +14,27 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Servicio de aplicación: orquesta el flujo entre el dominio y la infraestructura.
+ * OrderService actualizado para publicar eventos Kafka tras cada
+ * transición de estado.
  *
- * Patrón idéntico al ItemService:
- *   - @Transactional(readOnly = true) por defecto
- *   - Los métodos que escriben sobreescriben con @Transactional
- *   - La lógica de negocio (confirm, cancel) está en Order, no aquí
- *   - Inyección por constructor
+ * Orden de operaciones en los métodos que escriben:
+ * ══════════════════════════════════════════════════
+ *   1. Persistir el cambio en la BD (@Transactional)
+ *   2. Publicar el evento Kafka
  *
- * TODO Fase 2: confirm() y cancel() deberán notificar a otros servicios.
- *              Por ahora solo mutan el estado local.
+ * ¿Por qué en este orden?
+ * La BD es la fuente de verdad. Si Kafka falla, el dato está guardado
+ * y podemos reprocesar el evento (Outbox Pattern en Fase 3).
+ * Si persistiéramos DESPUÉS de publicar el evento y la BD fallara,
+ * el consumer procesaría un evento que no existe en la BD.
+ *
+ * El correlationId se recibe como parámetro desde el controller,
+ * que lo extrae del header HTTP X-Correlation-ID del request entrante.
+ * Así la cadena de trazabilidad es:
+ *   Cliente → controller → service → Kafka → notification-service
+ *   con el mismo correlationId en todos los logs.
+ *
+ * Ruta: order-service/src/main/java/…/application/service/
  */
 @Service
 @Transactional(readOnly = true)
@@ -31,20 +43,21 @@ public class OrderService implements OrderUseCase {
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
+    private final OrderProducerService producerService;
 
-    public OrderService(OrderRepository orderRepository) {
-        this.orderRepository = Objects.requireNonNull(orderRepository);
+    public OrderService(OrderRepository orderRepository,
+                        OrderProducerService producerService) {
+        this.orderRepository  = Objects.requireNonNull(orderRepository);
+        this.producerService  = Objects.requireNonNull(producerService);
     }
 
     @Override
     public List<Order> findAll() {
-        log.debug("Fetching all orders");
         return orderRepository.findAll();
     }
 
     @Override
     public Order findById(String id) {
-        log.debug("Fetching order id={}", id);
         return orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
@@ -52,27 +65,36 @@ public class OrderService implements OrderUseCase {
     @Override
     @Transactional
     public Order create(CreateOrderCommand command) {
+        return create(command, null);   // sin correlationId externo
+    }
+
+    /**
+     * Variante de create() que acepta un correlationId externo.
+     * El controller llama a esta versión pasando el header X-Correlation-ID.
+     */
+    @Transactional
+    public Order create(CreateOrderCommand command, String correlationId) {
         log.info("Creating order itemId='{}' quantity={}", command.itemId(), command.quantity());
 
-        /*
-         * TODO Fase 2: antes de crear la orden, validar que el item existe
-         * llamando a item-service via WebClient:
-         *
-         *   itemServiceClient.getItem(command.itemId())   // lanza excepción si no existe
-         *
-         * Por ahora asumimos que el itemId es válido.
-         */
-
+        // 1. Persistir
         Order order = Order.create(command.itemId(), command.quantity());
         Order saved = orderRepository.save(order);
 
-        log.info("Order created id='{}'", saved.getId());
+        // 2. Publicar evento DESPUÉS de guardar en BD
+        producerService.publishOrderCreated(saved, correlationId);
+
+        log.info("Order created and event published id='{}'", saved.getId());
         return saved;
     }
 
     @Override
     @Transactional
     public Order confirm(String id) {
+        return confirm(id, null);
+    }
+
+    @Transactional
+    public Order confirm(String id, String correlationId) {
         log.info("Confirming order id='{}'", id);
 
         Order order = orderRepository.findById(id)
@@ -81,22 +103,29 @@ public class OrderService implements OrderUseCase {
         order.confirm();   // lógica de negocio en el dominio
 
         Order saved = orderRepository.save(order);
-        log.info("Order confirmed id='{}'", id);
+        producerService.publishOrderConfirmed(saved, correlationId);   // evento tras persistir
+
         return saved;
     }
 
     @Override
     @Transactional
     public Order cancel(String id) {
+        return cancel(id, null);
+    }
+
+    @Transactional
+    public Order cancel(String id, String correlationId) {
         log.info("Cancelling order id='{}'", id);
 
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException(id));
 
-        order.cancel();    // lógica de negocio en el dominio
+        order.cancel();
 
         Order saved = orderRepository.save(order);
-        log.info("Order cancelled id='{}'", id);
+        producerService.publishOrderCancelled(saved, correlationId);   // evento tras persistir
+
         return saved;
     }
 }

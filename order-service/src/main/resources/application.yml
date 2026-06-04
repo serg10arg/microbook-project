@@ -1,0 +1,29 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      # Configuración mínima en yml — el resto está en KafkaProducerConfig
+      # para mantener la configuración tipada y comentada en un solo lugar.
+      key-serializer:   org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Incluir el tipo Java en los headers del mensaje
+        spring.json.add.type.headers: true
+
+    # La deserialización del consumer se configurará en Fase 3
+    consumer:
+      group-id: order-group
+      auto-offset-reset: earliest
+      key-deserializer:   org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.microbook.orderservice.domain.event"
+
+# ── Nombre del topic ─────────────────────────────────────────────────────────
+# Externalizado para poder cambiar el nombre sin recompilar.
+# En producción sobreescribir con variable de entorno:
+#   KAFKA_TOPICS_ORDERS=orders-prod
+kafka:
+  topics:
+    orders: orders
